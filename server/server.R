@@ -1,10 +1,188 @@
 source("aux_functions.R")$value
 
-server <- function(input,output,session) 
-{
-  
+server <- function(input, output, session) {
   # Adding code for rendering reports with code
   source("reports.R", local = TRUE)$value
+
+  # added by SB
+  observeEvent(input$logout_button, {
+    withProgress(message = 'Logging out', value = 0, {
+      sb_logout()
+      setProgress(0.3)
+      Sys.sleep(2) # give server some time to process request before page reload
+    })
+    session$reload()
+  })  
+
+  # not active because asynchronicity of this call creates problems upon
+  # page reloads
+  #session$onSessionEnded(sb_logout)
+  
+  # added by SB
+  output$projectSelector <- renderUI({
+    withProgress(message = 'Loadings projects', value = 0, {
+      setProgress(0.2)
+      project_list <- get_projects()
+      preselected_project <- project_list[project_list==get_project_context()]
+      selectInput("select_project",
+                label = "Select project",
+                choices = c(list(" " = ""), project_list),
+                selected = preselected_project,
+                multiple = FALSE)
+    })
+  })
+  
+  # added by SB
+  files_data_table <- reactive({
+    
+    if(is.null(input$select_project) || is.na(input$select_project) || input$select_project == '') return(NULL)
+    
+    withProgress(message = 'Retrieving project file list', value = 0, {
+
+      p <- sb_api()$project(id=input$select_project)
+      files <- as.list(p$file(complete = TRUE, detail=TRUE))
+      files <- files[sapply(files, function(x) x$type != "folder")] # no folder support for now
+      
+      df <- data.frame(Name=character(0), 
+                       Size=integer(0), 
+                       "Sample ID"=character(0), 
+                       "Case ID"=character(0), 
+                       "Sample type"=character(0), 
+                       "Created on"=character(0), 
+                       stringsAsFactors = FALSE,
+                       check.names=FALSE)
+      for (f in files) {
+        df <- rbind(df, data.frame(Name=f$name, 
+                                   Size=f$size, 
+                                   "Sample ID"=ifelse("sample_id" %in% names(f$metadata), f$metadata[["sample_id"]], NA),
+                                   "Case ID"=ifelse("case_id" %in% names(f$metadata), f$metadata[["case_id"]], NA), 
+                                   "Sample type"=ifelse("sample_type" %in% names(f$metadata), f$metadata[["sample_type"]], NA),
+                                   "Created on"=f$created_on,
+                                   stringsAsFactors = FALSE,
+                                   check.names=FALSE))
+      }
+      rownames(df) <- sapply(files, "[[", "id")
+      setProgress(1, detail = paste("Completed"))
+    })
+    return(df)    
+  })
+  
+  # added by SB
+  output$tbl.files <- DT::renderDataTable({
+    files_data_table() %>% DT::datatable(
+      class = 'cell-border stripe',
+      rownames = FALSE,
+      filter   = 'top',
+      options = list(pageLength = 20)
+    )
+  })
+
+  # added by SB  
+  get_count_matrix <- reactive({
+    
+    input$loadProjectFiles
+    
+    files <- isolate(files_data_table())
+    if (is.null(files)) return(NULL)
+    
+    sel <- isolate(input$tbl.files_rows_selected)
+    if (is.null(sel) || length(sel) < 2) return(NULL)
+
+    counts <- NULL
+    download_dir <- tempdir()
+
+    p <- isolate(sb_api()$project(id=input$select_project))
+    withProgress(message = 'Loading counts', value = 0, {
+      increment = 1 / length(sel)
+      progress = 0
+      for (s in sel) {
+        f <- p$file(id=rownames(files)[s])
+        
+        print(paste("Processing file", f$name))
+        progress = progress + increment
+        setProgress(progress, detail = paste(f$name))
+
+        local_path <- paste0(download_dir, "/", f$name)
+        f$download(download_dir)
+        df <- read.table(gzfile(local_path), header=F, stringsAsFactors=F)
+        colnames(df) <- c("Gene", files[s,"Sample ID"])
+        if (is.null(counts)) {
+          counts <- df
+        } else {
+          counts <- merge(counts, df, by="Gene", all=T)
+        }
+      }
+      counts <- counts[!grepl("__", counts[,"Gene"]),]
+      #write.table(counts, file="~/Downloads/merged.csv", col.names=T, row.names=F, quote=F, sep=",")
+      
+      setProgress(1, detail = paste("Completed"))
+    })
+    
+    return(counts)
+  })
+
+  # added by SB
+  get_files_metadata <- reactive({
+    
+    input$loadProjectFiles
+    
+    files <- isolate(files_data_table())
+    if (is.null(files)) return(NULL)
+    
+    sel <- isolate(input$tbl.files_rows_selected)
+    if (is.null(sel) || length(sel) < 2) return(NULL)
+    
+    p <- isolate(sb_api()$project(id=input$select_project))
+    
+    withProgress(message = 'Parsing file metadata', value = 0, {
+      increment = 1 / length(sel)
+      progress = 0
+      
+      # first pass: collect metadata fields available
+      selected_files <- c()
+      md_names <- c()
+      for (s in sel) {
+        f <- p$file(id=rownames(files)[s])
+        progress = progress + increment
+        setProgress(progress, detail = paste(f$name))
+        md_names <- union(md_names, names(f$metadata))
+        selected_files <- append(selected_files, f)
+      }
+      setProgress(1, detail = paste("Completed"))
+    })
+    
+    # second pass: build metadata dataframe
+    md <- data.frame(matrix(vector(), 0, length(md_names), dimnames=list(c(), md_names)), stringsAsFactors=F, check.names=F)
+    for (f in selected_files) {
+      values <- c()
+      for (n in md_names) {
+        values <- append(values, ifelse(n %in% names(f$metadata), f$metadata[[n]], NA))
+      }
+      md[nrow(md)+1,] <- values
+    }
+    
+    # put sample id in front
+    md <- md[,c("sample_id", names(md)[names(md) != "sample_id"])]
+    names(md)[1] <- "samples"
+
+    return(md)
+  })
+  
+  # added by SB
+  observeEvent(input$loadProjectFiles, {
+    sel <- input$tbl.files_rows_selected
+    if (length(sel) >= 2) {
+      get_count_matrix()
+      updateTabsetPanel(session, inputId="main", selected="Gene Expression")
+    } else {
+      sendSweetAlert(
+        session = session,
+        title =  "Not enough files",
+        text = paste0("Please select at least two input files from the table."),
+        type = "error"
+      )
+    }
+  })  
   
   output$contents <-  DT::renderDataTable({
     data <- getNormalizedData()$raw
@@ -70,7 +248,10 @@ server <- function(input,output,session)
                      }
         )
       }
-    }  
+    } else {
+      ret <- get_count_matrix()
+    }
+
     # Check if the input data has the required format
     ret <- checkDataInput(ret)
     ret
@@ -85,9 +266,9 @@ server <- function(input,output,session)
     }, error = function(e){
       sendSweetAlert(
         session = session,
-        title =  "Input error", 
-        text =   paste0("Data uploaded does not have the expected format.\n", 
-                        "\nWe were unable to identify the gene column or map it to hg38 or mm10.", 
+        title =  "Input error",
+        text =   paste0("Data uploaded does not have the expected format.\n",
+                        "\nWe were unable to identify the gene column or map it to hg38 or mm10.",
                         "\nThe expected input is a table with genes in the first column and genes raw counts on the other ones."),
         type = "error"
       )
@@ -133,6 +314,8 @@ server <- function(input,output,session)
                      setProgress(1, detail = paste("Completed"))
                    }
       )
+    } else {
+      ret <- get_files_metadata()
     }
     ret
   })
@@ -255,7 +438,7 @@ server <- function(input,output,session)
       selected_rows <- NULL
     } else {
       # which ones are already selected
-      selected_rows <- input$tbl.tab1_rows_selected
+      selected_rows <- isolate({input$tbl.tab1_rows_selected})
       
       # which column has our gene symbol ?
       idx <- grep("symbol|genename",colnames(tab),ignore.case = T)
@@ -1386,4 +1569,3 @@ server <- function(input,output,session)
       return(p)
   })
 }
-

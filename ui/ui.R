@@ -28,9 +28,24 @@ ui <- fluidPage(title = "GENAVi",
                        '
                   )
                 )),
-                titlePanel("GENAVi"),
+                titlePanel(tagList(
+                   "GENAVi",
+                   span(actionButton('logout_button', 'Logout', class = "btn-primary"),
+                        style = "position:absolute;right:2em;")
+                )),
                 useShinyjs(),
                 tabsetPanel( #type = "pills",
+                  id="main",
+                  tabPanel("Project files",
+                           icon = icon("table"),
+                           column(2,
+                                  uiOutput("projectSelector"),
+                                  actionButton("loadProjectFiles", "Load count files", class = "btn-primary"),
+                           ),
+                           column(10,
+                                  DT::dataTableOutput('tbl.files')
+                           )
+                  ),
                   tabPanel("Gene Expression",  ##changing from tab 1, but still using tab1 in the other parts of code
                            icon = icon("table"),
                            column(2,

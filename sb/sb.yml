@@ -1,0 +1,27 @@
+# The following app data is passed along to SB platform during the oauth2
+# authentication process. Change this information such that it matches
+# the data stored with the custom frontend entity on the SB platform. 
+# If the SB platform does not recognize this app or the information about
+# this app does not match, authentication will fail.
+
+app:
+  name: "GENAVi"
+  id: "<your-app-id-here>"
+  secret: "<your-app-secret-here>"
+  url: "http://localhost:3838"
+
+# The following endpoints are configured to work with SB production 
+# environment (SBPLA). Don't change these URLs unless this app is 
+# authenticating against an environment other than SBPLA.
+
+endpoints:
+  oauth2:
+    authorization_url: "https://accounts.sbgenomics.com/oauth2/authorization"
+    token_url: "https://accounts.sbgenomics.com/oauth2/token"
+    user_info_url: "https://accounts.sbgenomics.com/oauth2/userinfo"
+    jwks_url: "https://accounts.sbgenomics.com/jwk.json"
+    logout_url: "https://accounts.sbgenomics.com/oauth2/logout"
+  api:
+    base_url: "https://api.sbgenomics.com/v2/"
+  platform:
+    entity_url: "https://sbgenomics.com/u/"
