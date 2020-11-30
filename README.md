@@ -1,3 +1,5 @@
+# README from original author
+
 **GENAVi** (Gene Expression Normalization Analysis and Visualization) is an rshiny web application that provides a GUI based platform for the analysis of gene expression data. 
 
 GENAVi combines several R packages commonly used for normalizing, clustering, visualizing, and performing differential expression analysis (DEA) on RNA-seq data.
