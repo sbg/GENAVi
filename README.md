@@ -54,9 +54,7 @@ The resulting docker image was also pushed to the Seven Bridges docker repositor
 
 # Run GENAVi (Seven Bridges modified version)
 
-To learn how to spin up a hosting environment to run GENAVi for demo purposes, either locally or from a vayu, please refer to our internal documentation available here: https://sbgdev.atlassian.net/wiki/spaces/PROD/pages/2783707466/Hosting+the+GENAVi+custom+frontend
-
-For other hosting environments, you can run the dockerized version of GENAVi with the following `docker run` command, making sure to replace `<...>` with values corresponding to your specific environment:
+You can run the dockerized version of GENAVi with the following `docker run` command, making sure to replace `<...>` with values corresponding to your specific environment:
 
 ```
 docker run -d --restart unless-stopped -u 999 -p <port>:3838 \
