@@ -37,7 +37,7 @@ The following changes were introduced into the stock GENAVi app to support OAuth
 
 We added a few features to the stock GENAVi app to take advantage of platform integration and to improve user flow.
 
-First, files with RNA-seq count data can now be loaded directly from a platform project. The count matrix is then computed on-the-fly from those files. This supplements the already existing functionality to upload a count matrix directly from a user's local computer. Towards that end, we added a **new application tab "Project files"**, on which users first select one of their Seven Bridges projects and then select files containing count data within that project. Files can be filtered and sorted by name, type, size, or file metadata. 
+First, files with per-sample RNA-seq count data can now be loaded directly from a platform project. A gene-by-sample count matrix is then computed on-the-fly from those files. Towards that end, we added a **new application tab "Project files"**, on which users first select a Seven Bridges project and then within that project select files containing per-sample count data. Files can be filtered and sorted by name, type, size, or file metadata. This new feature supplements the already existing GENAVi functionality to upload a pre-built gene-by-sample count matrix directly from a user's local computer. 
 
 The new tab has been added directly to the `fluidPage` defined inside `ui/ui.R`. Note that when the GENAVi app is launched from within a Seven Bridges project, the current project is already pre-selected and files inside that project are already shown, which simplifies the user flow further.
 
