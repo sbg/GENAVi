@@ -21,7 +21,7 @@ We recommend running GENAVi on a local machine or server when uploading a large 
 
 ## Authentication and authorization using OAuth2
 
-To allow GENAVi direct access to a user's files stored on the Seven Bridges Platform, an OAuth2 authentication flow was built into the Shiny app. This is possible because [the Seven Bridges Platform can serve as Authorization and Resource Server under the OAuth2 protocol](https://docs.sevenbridges.com/docs/integrate-your-web-application).
+To allow GENAVi direct access to a user's files stored on the Seven Bridges Platform, an OAuth2 authentication flow was built into the Shiny app. This is possible because [the Seven Bridges Platform can serve as Authorization and Resource Server under the OAuth2 protocol](https://docs.sevenbridges.com/docs/integrate-your-web-application). Please follow instructions over there to get your own web application registered with the Seven Bridges Platform.
 
 GENAVi users first log into the app using their Seven Bridges Platform credentials. If successful, the app is handed over a **temporary access token**. GENAVi then uses this access token to authenticate against the Seven Bridges Public API and to access the platform on the user's behalf.  
 
